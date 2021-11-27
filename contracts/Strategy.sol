@@ -183,8 +183,17 @@ contract Strategy is BaseStrategy {
         override
         returns (uint256)
     {
-        // TODO create an accurate price oracle
-        return _amtInWei;
+        // WETH strategy so wei * 10^18
+        return _amtInWei.mul(10 ** 18);
+    }
+
+    // ----------------- EXTERNAL FUNCTIONS ---------
+
+    function requestWithdrawal(uint256 amount)
+        public
+        onlyEmergencyAuthorized
+    {
+        tokemakEthPool.requestWithdrawal(amount);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------
