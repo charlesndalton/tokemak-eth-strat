@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.11;
+pragma solidity 0.6.12;
 
-import "../interfaces/IWETH.sol";
-import "../interfaces/IManager.sol";
+import "./IWETH.sol";
+import "./IManager.sol";
 
 /// @title Interface for Pool
 /// @notice Allows users to deposit ERC-20 tokens to be deployed to market makers.

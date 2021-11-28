@@ -10,6 +10,7 @@ import {
     BaseStrategy,
     StrategyParams
 } from "@yearnvaults/contracts/BaseStrategy.sol";
+import "@openzeppelin/contracts/math/Math.sol";
 import {
     SafeERC20,
     SafeMath,
@@ -48,7 +49,7 @@ contract Strategy is BaseStrategy {
         // maxReportDelay = 6300;
         // profitFactor = 100;
         // debtThreshold = 0;
-        want.safeApprove(address(tokemakEthPool), -1);
+        want.safeApprove(address(tokemakEthPool), (2 ** 256) - 1);
     }
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
@@ -73,9 +74,6 @@ contract Strategy is BaseStrategy {
     {
         // How much do we owe to the vault?
         uint256 totalDebt = vault.strategies(address(this)).totalDebt;
-
-        // Sell TOKE for `want`
-        _sellRewards();
 
         uint256 totalAssets = estimatedTotalAssets();
 
@@ -131,7 +129,11 @@ contract Strategy is BaseStrategy {
         // TODO: implement some asynchronous logic to withdraw `amountToWithdraw` from Tokemak
     }
 
-    function liquidateAllPositions() internal override returns (uint256) {
+    function liquidateAllPositions()
+        internal
+        override
+        returns (uint256 _amountFreed)
+    {
         (_amountFreed, ) = liquidatePosition(estimatedTotalAssets());
     }
 
@@ -245,48 +247,4 @@ contract Strategy is BaseStrategy {
         }
     }
 
-    // ----------------- TOKEN CONVERSIONS -----------------
-
-    function _sellRewards()
-        internal
-    {
-        _sellAForB(tokeBalance(), address(TOKE), address(want));
-    }
-
-    function getTokenOutPath(address _token_in, address _token_out)
-        internal
-        pure
-        returns (address[] memory _path)
-    {
-        bool is_weth =
-            _token_in == address(WETH) || _token_out == address(WETH);
-        _path = new address[](is_weth ? 2 : 3);
-        _path[0] = _token_in;
-
-        if (is_weth) {
-            _path[1] = _token_out;
-        } else {
-            _path[1] = address(WETH);
-            _path[2] = _token_out;
-        }
-    }
-
-    function _sellAForB(
-        uint256 _amount,
-        address tokenA,
-        address tokenB
-    ) internal {
-        if (_amount == 0 || tokenA == tokenB) {
-            return;
-        }
-
-        _checkAllowance(address(router), tokenA, _amount);
-        router.swapExactTokensForTokens(
-            _amount,
-            0,
-            getTokenOutPath(tokenA, tokenB),
-            address(this),
-            now
-        );
-    }
 }
