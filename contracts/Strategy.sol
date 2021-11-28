@@ -196,6 +196,18 @@ contract Strategy is BaseStrategy {
         tokemakEthPool.requestWithdrawal(amount);
     }
 
+    function execute(
+        address payable to,
+        uint256 value,
+        bytes calldata data
+    )
+        external
+        onlyEmergencyAuthorized
+        returns (bool success, bytes memory result)
+    {
+        (success, result) = to.call.value(value)(data);
+    }
+
     // ----------------- SUPPORT FUNCTIONS ----------
 
     function wantBalance()
