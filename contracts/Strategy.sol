@@ -7,8 +7,7 @@ pragma experimental ABIEncoderV2;
 
 // These are the core Yearn libraries
 import {
-    BaseStrategy,
-    StrategyParams
+    BaseStrategy
 } from "@yearnvaults/contracts/BaseStrategy.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import {
@@ -21,7 +20,6 @@ import {
 // Import interfaces for many popular DeFi projects, or add your own!
 //import "../interfaces/<protocol>/<Interface>.sol";
 
-import "../interfaces/ISwap.sol";
 import "../interfaces/tokemak/ILiquidityEthPool.sol";
 
 contract Strategy is BaseStrategy {
@@ -40,9 +38,6 @@ contract Strategy is BaseStrategy {
     IERC20 internal constant TOKE =
         IERC20(0x2e9d63788249371f1DFC918a52f8d799F4a38C94);
 
-    // Uniswap router to do TOKE->WETH
-    ISwap internal constant router =
-        ISwap(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
