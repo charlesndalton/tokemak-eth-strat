@@ -40,17 +40,16 @@ def keeper(accounts):
 
 @pytest.fixture
 def token():
-    token_address = "0x6b175474e89094c44da98b954eedeac495271d0f"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
+    token_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # this should be the address of the ERC-20 used by the strategy/vault (wETH)
     yield Contract(token_address)
 
 
 @pytest.fixture
-def amount(accounts, token, user):
-    amount = 10_000 * 10 ** token.decimals()
+def amount(accounts, token, user, weth_whale):
+    amount = 10 * 10 ** token.decimals()
     # In order to get some funds for the token you are about to use,
-    # it impersonate an exchange address to use it's funds.
-    reserve = accounts.at("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643", force=True)
-    token.transfer(user, amount, {"from": reserve})
+    # it impersonate the weth whale to use its funds.
+    token.transfer(user, amount, {"from": weth_whale})
     yield amount
 
 
@@ -59,6 +58,16 @@ def weth():
     token_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     yield Contract(token_address)
 
+@pytest.fixture
+def tweth():
+    token_address = "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36"
+    yield Contract(token_address)
+
+
+@pytest.fixture
+def weth_whale(accounts):
+    # AAVE wETH pool
+    yield accounts.at("0x030bA81f1c18d280636F32af80b9AAd02Cf0854e", force=True)
 
 @pytest.fixture
 def weth_amout(user, weth):
@@ -76,6 +85,13 @@ def vault(pm, gov, rewards, guardian, management, token):
     vault.setManagement(management, {"from": gov})
     yield vault
 
+@pytest.fixture
+def clone_strategy(vault, strategy, strategist):
+    clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
+    cloned_strategy = Contract.from_abi(
+        "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
+    )
+    yield cloned_strategy
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, Strategy, gov):

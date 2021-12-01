@@ -33,11 +33,12 @@ contract Strategy is BaseStrategy {
     // From Tokemak docs: tABC tokens represent your underlying claim to the assets
     // you deposited into the token reactor, available to be redeemed 1:1 at any time
     IERC20 internal constant tWETH =
-        IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        IERC20(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
 
     IERC20 internal constant TOKE =
         IERC20(0x2e9d63788249371f1DFC918a52f8d799F4a38C94);
 
+    bool internal isOriginal = true;
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
@@ -58,7 +59,9 @@ contract Strategy is BaseStrategy {
         address _vault,
         address _strategist
     ) external returns (address payable newStrategy) {
-         bytes20 addressBytes = bytes20(address(this));
+        require(isOriginal);
+
+        bytes20 addressBytes = bytes20(address(this));
 
         assembly {
             // EIP-1167 bytecode
@@ -166,8 +169,9 @@ contract Strategy is BaseStrategy {
     // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
 
     function prepareMigration(address _newStrategy) internal override {
-        // TODO: Transfer any non-`want` tokens to the new strategy
-        // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
+        uint256 _amountToTransfer = twethBalance();
+
+        tWETH.transfer(_newStrategy, _amountToTransfer);
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
