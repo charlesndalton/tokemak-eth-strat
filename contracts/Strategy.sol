@@ -30,6 +30,9 @@ contract Strategy is BaseStrategy {
     ILiquidityEthPool private tokemakEthPool =
         ILiquidityEthPool(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
 
+    IManager private tokemakManager =
+        IManager(0xA86e412109f77c45a3BC1c5870b880492Fb86A14);
+
     // From Tokemak docs: tABC tokens represent your underlying claim to the assets
     // you deposited into the token reactor, available to be redeemed 1:1 at any time
     IERC20 internal constant tWETH =
@@ -110,11 +113,11 @@ contract Strategy is BaseStrategy {
             _loss = totalDebt.sub(totalAssets);
         }
 
-        uint256 liquidAssets = wantBalance();
+        liquidatePosition(_debtOutstanding);
 
-        _debtPayment = Math.min(_debtOutstanding, liquidAssets);
+        uint256 _liquidAssets = wantBalance();
 
-        // TODO: implement some asynchronous logic that frees up assets from Tokemak
+        _debtPayment = Math.min(_debtOutstanding, _liquidAssets);
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
@@ -141,21 +144,32 @@ contract Strategy is BaseStrategy {
         // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
 
-        uint256 liquidAssets = wantBalance();
+        uint256 _existingLiquidAssets = wantBalance();
 
-        if (liquidAssets >= _amountNeeded) {
+        if (_existingLiquidAssets >= _amountNeeded) {
             return (_amountNeeded, 0);
         }
 
-        uint256 amountToWithdraw = _amountNeeded.sub(liquidAssets);
+        uint256 _amountToWithdraw = _amountNeeded.sub(_existingLiquidAssets);
 
-        // Cannot withdraw more than what we have in deposit
-        amountToWithdraw = Math.min(
-            amountToWithdraw,
-            twethBalance()
+        (uint256 _blockNumberWhenWithdrawable, uint256 _amountWithdrawable) = 
+            tokemakEthPool.requestedWithdrawals(address(this));
+
+        if (_amountWithdrawable == 0 || _blockNumberWhenWithdrawable >= block.number) {
+            return (_existingLiquidAssets, 0);
+        }
+
+        // Cannot withdraw more than withdrawable
+        _amountToWithdraw = Math.min(
+            _amountToWithdraw,
+            _amountWithdrawable
         );
 
-        // TODO: implement some asynchronous logic to withdraw `amountToWithdraw` from Tokemak
+        tokemakEthPool.withdraw(_amountToWithdraw, false);
+
+        uint256 _newLiquidAssets = wantBalance();
+
+        _liquidatedAmount = Math.min(_newLiquidAssets, _amountNeeded);
     }
 
     function liquidateAllPositions()

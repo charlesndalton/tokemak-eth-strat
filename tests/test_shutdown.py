@@ -6,7 +6,8 @@ import pytest
 
 
 def test_vault_shutdown_can_withdraw(
-    chain, token, vault, strategy, user, amount, RELATIVE_APPROX
+    chain, token, vault, strategy, user, amount, RELATIVE_APPROX,
+    tokemak_manager, account_with_tokemak_rollover_role, utils
 ):
     ## Deposit in Vault
     token.approve(vault.address, amount, {"from": user})
@@ -25,6 +26,8 @@ def test_vault_shutdown_can_withdraw(
     ## Set Emergency
     vault.setEmergencyShutdown(True)
 
+    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
+
     ## Withdraw (does it work, do you get what you expect)
     vault.withdraw({"from": user})
 
@@ -32,7 +35,8 @@ def test_vault_shutdown_can_withdraw(
 
 
 def test_basic_shutdown(
-    chain, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX
+    chain, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX,
+    tokemak_manager, account_with_tokemak_rollover_role, utils
 ):
     # Deposit to the vault
     token.approve(vault.address, amount, {"from": user})
@@ -55,6 +59,8 @@ def test_basic_shutdown(
 
     ## Set emergency
     strategy.setEmergencyExit({"from": strategist})
+
+    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
 
     strategy.harvest()  ## Remove funds from strategy
 

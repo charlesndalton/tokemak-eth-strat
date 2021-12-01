@@ -63,11 +63,30 @@ def tweth():
     token_address = "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36"
     yield Contract(token_address)
 
+@pytest.fixture
+def toke_token():
+    token_address = "0x2e9d63788249371f1DFC918a52f8d799F4a38C94"
+    yield Contract(token_address)
+
+@pytest.fixture
+def tokemak_manager():
+    token_address = "0xA86e412109f77c45a3BC1c5870b880492Fb86A14"
+    yield Contract(token_address)
 
 @pytest.fixture
 def weth_whale(accounts):
     # AAVE wETH pool
     yield accounts.at("0x030bA81f1c18d280636F32af80b9AAd02Cf0854e", force=True)
+
+@pytest.fixture
+def toke_whale(accounts):
+    # tokemak treasury
+    yield accounts.at("0x8b4334d4812c530574bd4f2763fcd22de94a969b", force=True)
+
+@pytest.fixture
+def account_with_tokemak_rollover_role(accounts):
+    # this account should have the role to allow them to call the Tokemak rollover contract
+    yield accounts.at("0x9e0bcE7ec474B481492610eB9dd5D69EB03718D5", force=True)
 
 @pytest.fixture
 def weth_amout(user, weth):
@@ -104,3 +123,23 @@ def strategy(strategist, keeper, vault, Strategy, gov):
 @pytest.fixture(scope="session")
 def RELATIVE_APPROX():
     yield 1e-5
+
+@pytest.fixture
+def utils():
+    return Utils
+
+class Utils:
+    @staticmethod
+    def mock_one_day_passed(chain, tokemak_manager, account_with_tokemak_rollover_role):
+        chain.sleep(3600 * 24)
+        # current cycle duration is 6200 blocks; can be found here:
+        # https://etherscan.io/address/0xa86e412109f77c45a3bc1c5870b880492fb86a14#readProxyContract
+        chain.mine(6300)
+        tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": account_with_tokemak_rollover_role})
+    
+    @staticmethod
+    def make_funds_withdrawable_from_tokemak(self, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role):
+        strategy.requestWithdrawal(amount)
+
+        # Tokemak has 1 day timelock for withdrawals
+        self.mock_one_day_passed(chain, tokemak_manager, account_with_tokemak_rollover_role)
