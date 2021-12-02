@@ -27,19 +27,13 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    ILiquidityEthPool private tokemakEthPool =
+    ILiquidityEthPool internal constant tokemakEthPool =
         ILiquidityEthPool(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
-
-    IManager private tokemakManager =
-        IManager(0xA86e412109f77c45a3BC1c5870b880492Fb86A14);
 
     // From Tokemak docs: tABC tokens represent your underlying claim to the assets
     // you deposited into the token reactor, available to be redeemed 1:1 at any time
     IERC20 internal constant tWETH =
         IERC20(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
-
-    IERC20 internal constant TOKE =
-        IERC20(0x2e9d63788249371f1DFC918a52f8d799F4a38C94);
 
     bool internal isOriginal = true;
 
@@ -107,9 +101,7 @@ contract Strategy is BaseStrategy {
 
         if (totalAssets >= totalDebt) {
             _profit = totalAssets.sub(totalDebt);
-            _loss = 0;
         } else {
-            _profit = 0;
             _loss = totalDebt.sub(totalAssets);
         }
 
@@ -236,7 +228,7 @@ contract Strategy is BaseStrategy {
     // ----------------- EXTERNAL FUNCTIONS ---------
 
     function requestWithdrawal(uint256 amount)
-        public
+        external
         onlyEmergencyAuthorized
     {
         tokemakEthPool.requestWithdrawal(amount);
@@ -270,14 +262,6 @@ contract Strategy is BaseStrategy {
         returns (uint256)
     {
         return tWETH.balanceOf(address(this));
-    }
-
-    function tokeBalance()
-        internal
-        view
-        returns (uint256)
-    {
-        return TOKE.balanceOf(address(this));
     }
 
     function _checkAllowance(

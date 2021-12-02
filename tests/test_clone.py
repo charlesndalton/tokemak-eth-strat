@@ -5,12 +5,15 @@ import pytest
 
 
 def test_clone_strategy(
-    clone_strategy, chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX
+    chain, accounts, token, vault, user, standalone_strategy, strategist, amount, RELATIVE_APPROX, tweth, gov
 ):
-    clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
+  
+    clone_tx = standalone_strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
     cloned_strategy = Contract.from_abi(
-        "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
+        "Strategy", clone_tx.events["Cloned"]["clone"], standalone_strategy.abi
     )
+
+    vault.addStrategy(cloned_strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
 
     # Deposit to the vault
     user_balance_before = token.balanceOf(user)
@@ -20,14 +23,16 @@ def test_clone_strategy(
 
     # harvest
     chain.sleep(1)
-    strategy.harvest()
-    assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
+    cloned_strategy.harvest({"from": strategist})
+    assert pytest.approx(cloned_strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
+
+    assert pytest.approx(tweth.balanceOf(cloned_strategy), rel=RELATIVE_APPROX) == amount
 
     # tend()
-    strategy.tend()
+    cloned_strategy.tend({"from": strategist})
 
 def test_clone_of_clone(
-    clone_strategy, vault, strategy, strategist
+    vault, strategy, strategist
 ):
     clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
     cloned_strategy = Contract.from_abi(
@@ -41,7 +46,7 @@ def test_clone_of_clone(
 
 
 def test_double_initialize(
-    clone_strategy, vault, strategy, strategist
+    vault, strategy, strategist
 ):
 
     clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})

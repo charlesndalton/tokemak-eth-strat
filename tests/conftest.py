@@ -105,20 +105,18 @@ def vault(pm, gov, rewards, guardian, management, token):
     yield vault
 
 @pytest.fixture
-def clone_strategy(vault, strategy, strategist):
-    clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
-    cloned_strategy = Contract.from_abi(
-        "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
-    )
-    yield cloned_strategy
-
-@pytest.fixture
 def strategy(strategist, keeper, vault, Strategy, gov):
     strategy = strategist.deploy(Strategy, vault)
     strategy.setKeeper(keeper)
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy
 
+# strategy with no debt allocation
+@pytest.fixture
+def standalone_strategy(strategist, keeper, vault, Strategy, gov):
+    strategy = strategist.deploy(Strategy, vault)
+    strategy.setKeeper(keeper)
+    yield strategy
 
 @pytest.fixture(scope="session")
 def RELATIVE_APPROX():
