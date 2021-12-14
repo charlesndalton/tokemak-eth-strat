@@ -6,9 +6,6 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 // These are the core Yearn libraries
-import {
-    BaseStrategy
-} from "@yearnvaults/contracts/BaseStrategy.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import {
     SafeERC20,
@@ -17,12 +14,15 @@ import {
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+import "./ySwap/BaseStrategyWithSwapperEnabled.sol";
+
 // Import interfaces for many popular DeFi projects, or add your own!
 //import "../interfaces/<protocol>/<Interface>.sol";
 
 import "../interfaces/tokemak/ILiquidityEthPool.sol";
+import "../interfaces/tokemak/IRewards.sol";
 
-contract Strategy is BaseStrategy {
+contract Strategy is BaseStrategyWithSwapperEnabled {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -35,9 +35,15 @@ contract Strategy is BaseStrategy {
     IERC20 internal constant tWETH =
         IERC20(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
 
+    IRewards internal constant tokemakRewards = 
+        IRewards(0x79dD22579112d8a5F7347c5ED7E609e60da713C5);
+
+    IERC20 internal constant tokeToken =
+        IERC20(0x2e9d63788249371f1DFC918a52f8d799F4a38C94);
+
     bool internal isOriginal = true;
 
-    constructor(address _vault) public BaseStrategy(_vault) {
+    constructor(address _vault,  address _tradeFactory) public BaseStrategyWithSwapperEnabled(_vault, _tradeFactory) {
         // You can set these parameters on deployment to whatever you want
         // maxReportDelay = 6300;
         // profitFactor = 100;
@@ -73,8 +79,6 @@ contract Strategy is BaseStrategy {
 
         emit Cloned(newStrategy);
     }
-
-    // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
     function name() external view override returns (string memory) {
         return "StrategyTokemakWETH";
@@ -113,9 +117,6 @@ contract Strategy is BaseStrategy {
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
-        // TODO: Do something to invest excess `want` tokens (from the Vault) into your positions
-        // NOTE: Try to adjust positions so that `_debtOutstanding` can be freed up on *next* harvest (not immediately)
-
         uint256 wantBalance = wantBalance();
 
         if (wantBalance > _debtOutstanding) {
@@ -132,8 +133,6 @@ contract Strategy is BaseStrategy {
         override
         returns (uint256 _liquidatedAmount, uint256 _loss)
     {
-        // TODO: Do stuff here to free up to `_amountNeeded` from all positions back into `want`
-        // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
 
         uint256 _existingLiquidAssets = wantBalance();
@@ -144,17 +143,17 @@ contract Strategy is BaseStrategy {
 
         uint256 _amountToWithdraw = _amountNeeded.sub(_existingLiquidAssets);
 
-        (uint256 _blockNumberWhenWithdrawable, uint256 _amountWithdrawable) = 
+        (uint256 _blockNumberWhenWithdrawable, uint256 _requestedWithdrawAmount) = 
             tokemakEthPool.requestedWithdrawals(address(this));
 
-        if (_amountWithdrawable == 0 || _blockNumberWhenWithdrawable >= block.number) {
+        if (_requestedWithdrawAmount == 0 || _blockNumberWhenWithdrawable >= block.number) {
             return (_existingLiquidAssets, 0);
         }
 
         // Cannot withdraw more than withdrawable
         _amountToWithdraw = Math.min(
             _amountToWithdraw,
-            _amountWithdrawable
+            _requestedWithdrawAmount
         );
 
         tokemakEthPool.withdraw(_amountToWithdraw, false);
@@ -171,8 +170,6 @@ contract Strategy is BaseStrategy {
     {
         (_amountFreed, ) = liquidatePosition(estimatedTotalAssets());
     }
-
-    // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
 
     function prepareMigration(address _newStrategy) internal override {
         uint256 _amountToTransfer = twethBalance();
@@ -200,20 +197,6 @@ contract Strategy is BaseStrategy {
         returns (address[] memory)
     {}
 
-    /**
-     * @notice
-     *  Provide an accurate conversion from `_amtInWei` (denominated in wei)
-     *  to `want` (using the native decimal characteristics of `want`).
-     * @dev
-     *  Care must be taken when working with decimals to assure that the conversion
-     *  is compatible. As an example:
-     *
-     *      given 1e17 wei (0.1 ETH) as input, and want is USDC (6 decimals),
-     *      with USDC/ETH = 1800, this should give back 1800000000 (180 USDC)
-     *
-     * @param _amtInWei The amount (in wei/1e-18 ETH) to convert to `want`
-     * @return The amount in `want` of `_amtInEth` converted to `want`
-     **/
     function ethToWant(uint256 _amtInWei)
         public
         view
@@ -225,31 +208,48 @@ contract Strategy is BaseStrategy {
         return _amtInWei.mul(10 ** 18);
     }
 
-    // ----------------- EXTERNAL FUNCTIONS ---------
+    // ----------------- STRATEGIST-MANAGED FUNCTIONS ---------
 
     function requestWithdrawal(uint256 amount)
-        external
+        public
         onlyEmergencyAuthorized
     {
         tokemakEthPool.requestWithdrawal(amount);
     }
 
-    function execute(
-        address payable to,
-        uint256 value,
-        bytes calldata data
-    )
+    function sellRewards() 
         external
         onlyEmergencyAuthorized
-        returns (bool success, bytes memory result)
     {
-        (success, result) = to.call.value(value)(data);
+        uint256 _tokeBalance = tokeTokenBalance();
+
+        _executeTrade(address(tokeToken), address(want), _tokeBalance, 100);
+    }
+
+    function claimRewards(
+        IRewards.Recipient calldata _recipient,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s // bytes calldata signature
+    )
+        external
+        onlyEmergencyAuthorized 
+    {
+        tokemakRewards.claim(_recipient, _v, _r, _s);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------
 
+    function tokeTokenBalance()
+        public
+        view
+        returns (uint256) 
+    {
+        return tokeToken.balanceOf(address(this));
+    }
+
     function wantBalance()
-        internal
+        public
         view
         returns (uint256)
     {
@@ -257,7 +257,7 @@ contract Strategy is BaseStrategy {
     }
 
     function twethBalance()
-        internal
+        public
         view
         returns (uint256)
     {
