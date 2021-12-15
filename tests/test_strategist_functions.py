@@ -32,7 +32,7 @@ def test_request_withdrawal(
 # at the moment, not adding any test for 'claimRewards,' given that it is just a wrapper of tokemak function and there's an off-chain step which is hard to mock
 
 def test_sell_rewards(
-    chain, strategy, toke_token, toke_whale, weth, RELATIVE_APPROX
+    chain, strategy, toke_token, strategist, toke_whale, weth, RELATIVE_APPROX
 ):
     amount_of_toke_to_sell = 100
     amount_of_weth_in_strategy_before_sale = weth.balanceOf(strategy.address)
@@ -43,7 +43,7 @@ def test_sell_rewards(
 
     assert pytest.approx(toke_token.balanceOf(strategy.address), rel=RELATIVE_APPROX) == amount_of_toke_to_sell
 
-    strategy.sellRewards()
+    strategy.sellRewards({"from": strategist})
     chain.mine()
     amount_of_weth_in_strategy_after_sale = weth.balanceOf(strategy.address)
 

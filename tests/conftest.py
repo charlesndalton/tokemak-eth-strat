@@ -106,7 +106,7 @@ def vault(pm, gov, rewards, guardian, management, token):
 
 @pytest.fixture
 def trade_factory():
-    yield Contract("0x382ec4342775607ad64949bC26402b5F8CD651fe")
+    yield Contract("0xBf26Ff7C7367ee7075443c4F95dEeeE77432614d")
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
@@ -117,8 +117,8 @@ def strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
 
 # strategy with no debt allocation
 @pytest.fixture
-def standalone_strategy(strategist, keeper, vault, Strategy, gov):
-    strategy = strategist.deploy(Strategy, vault)
+def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
+    strategy = strategist.deploy(Strategy, vault, trade_factory)
     strategy.setKeeper(keeper)
     yield strategy
 
@@ -142,13 +142,12 @@ class Utils:
 
     def mock_one_day_passed(self):
         self.chain.sleep(3600 * 24)
-        # current cycle duration is 6200 blocks; can be found here:
-        # https://etherscan.io/address/0xa86e412109f77c45a3bc1c5870b880492fb86a14#readProxyContract
-        self.chain.mine(6300)
-        tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": account_with_tokemak_rollover_role})
+        cycle_duration = self.tokemak_manager.getCycleDuration()
+        self.chain.mine(cycle_duration + 100)
+        self.tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": self.account_with_tokemak_rollover_role})
     
     def make_funds_withdrawable_from_tokemak(self, strategy, amount):
         strategy.requestWithdrawal(amount)
 
         # Tokemak has 1 day timelock for withdrawals
-        Utils.mock_one_day_passed(self.chain, self.tokemak_manager, self.account_with_tokemak_rollover_role)
+        self.mock_one_day_passed()
