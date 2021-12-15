@@ -5,10 +5,11 @@ import pytest
 
 
 def test_clone_strategy(
-    chain, accounts, token, vault, user, standalone_strategy, strategist, amount, RELATIVE_APPROX, tweth, gov
+    chain, accounts, token, vault, user, standalone_strategy, strategist, amount, 
+    RELATIVE_APPROX, tweth, gov, trade_factory
 ):
   
-    clone_tx = standalone_strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
+    clone_tx = standalone_strategy.cloneTokemakWeth(vault, strategist, trade_factory, {"from": strategist})
     cloned_strategy = Contract.from_abi(
         "Strategy", clone_tx.events["Cloned"]["clone"], standalone_strategy.abi
     )
@@ -32,28 +33,28 @@ def test_clone_strategy(
     cloned_strategy.tend({"from": strategist})
 
 def test_clone_of_clone(
-    vault, strategy, strategist
+    vault, strategy, strategist, trade_factory
 ):
-    clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
+    clone_tx = strategy.cloneTokemakWeth(vault, strategist, trade_factory, {"from": strategist})
     cloned_strategy = Contract.from_abi(
         "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
     )
 
     # should not clone a clone
     with reverts():
-         cloned_strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
+         cloned_strategy.cloneTokemakWeth(vault, strategist, trade_factory, {"from": strategist})
 
 
 
 def test_double_initialize(
-    vault, strategy, strategist
+    vault, strategy, strategist, trade_factory
 ):
 
-    clone_tx = strategy.cloneTokemakWeth(vault, strategist, {"from": strategist})
+    clone_tx = strategy.cloneTokemakWeth(vault, strategist, trade_factory, {"from": strategist})
     cloned_strategy = Contract.from_abi(
         "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
     )
 
     # should not be able to call initialize twice
     with reverts("Strategy already initialized"):
-        cloned_strategy.initialize(vault, strategist, {"from": strategist})
+        cloned_strategy.initialize(vault, strategist, trade_factory, {"from": strategist})

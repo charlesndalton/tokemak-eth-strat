@@ -55,15 +55,18 @@ contract Strategy is BaseStrategy, SwapperEnabled {
 
     function initialize(
         address _vault,
-        address _strategist
+        address _strategist,
+        address _tradeFactory
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
+         _setTradeFactory(_tradeFactory);
     }
 
     event Cloned(address indexed clone);
     function cloneTokemakWeth(
         address _vault,
-        address _strategist
+        address _strategist,
+        address _tradeFactory
     ) external returns (address payable newStrategy) {
         require(isOriginal);
 
@@ -78,7 +81,7 @@ contract Strategy is BaseStrategy, SwapperEnabled {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist);
+        Strategy(newStrategy).initialize(_vault, _strategist, _tradeFactory);
 
         emit Cloned(newStrategy);
     }
