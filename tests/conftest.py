@@ -105,8 +105,12 @@ def vault(pm, gov, rewards, guardian, management, token):
     yield vault
 
 @pytest.fixture
-def strategy(strategist, keeper, vault, Strategy, gov):
-    strategy = strategist.deploy(Strategy, vault)
+def trade_factory():
+    yield Contract("0x382ec4342775607ad64949bC26402b5F8CD651fe")
+
+@pytest.fixture
+def strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
+    strategy = strategist.deploy(Strategy, vault, trade_factory)
     strategy.setKeeper(keeper)
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy
@@ -123,21 +127,28 @@ def RELATIVE_APPROX():
     yield 1e-5
 
 @pytest.fixture
-def utils():
-    return Utils
+def tokemak_weth_pool():
+    yield Contract("0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36")
+
+@pytest.fixture
+def utils(chain, tokemak_manager, account_with_tokemak_rollover_role):
+    return Utils(chain, tokemak_manager, account_with_tokemak_rollover_role)
 
 class Utils:
-    @staticmethod
-    def mock_one_day_passed(chain, tokemak_manager, account_with_tokemak_rollover_role):
-        chain.sleep(3600 * 24)
+    def __init__(self, chain, tokemak_manager, account_with_tokemak_rollover_role):
+        self.chain = chain
+        self.tokemak_manager = tokemak_manager
+        self.account_with_tokemak_rollover_role = account_with_tokemak_rollover_role
+
+    def mock_one_day_passed(self):
+        self.chain.sleep(3600 * 24)
         # current cycle duration is 6200 blocks; can be found here:
         # https://etherscan.io/address/0xa86e412109f77c45a3bc1c5870b880492fb86a14#readProxyContract
-        chain.mine(6300)
+        self.chain.mine(6300)
         tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": account_with_tokemak_rollover_role})
     
-    @staticmethod
-    def make_funds_withdrawable_from_tokemak(self, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role):
+    def make_funds_withdrawable_from_tokemak(self, strategy, amount):
         strategy.requestWithdrawal(amount)
 
         # Tokemak has 1 day timelock for withdrawals
-        self.mock_one_day_passed(chain, tokemak_manager, account_with_tokemak_rollover_role)
+        Utils.mock_one_day_passed(self.chain, self.tokemak_manager, self.account_with_tokemak_rollover_role)

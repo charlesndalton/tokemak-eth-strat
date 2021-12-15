@@ -13,7 +13,7 @@ def test_revoke_strategy_from_vault(
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
     vault.revokeStrategy(strategy.address, {"from": gov})
-    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
+    utils.make_funds_withdrawable_from_tokemak(strategy, amount)
     strategy.harvest()
     assert pytest.approx(token.balanceOf(vault.address), rel=RELATIVE_APPROX) == amount
 
@@ -30,6 +30,6 @@ def test_revoke_strategy_from_strategy(
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
     strategy.setEmergencyExit()
-    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
+    utils.make_funds_withdrawable_from_tokemak(strategy, amount)
     strategy.harvest()
     assert pytest.approx(token.balanceOf(vault.address), rel=RELATIVE_APPROX) == amount

@@ -217,15 +217,6 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         tokemakEthPool.requestWithdrawal(amount);
     }
 
-    function sellRewards() 
-        external
-        onlyEmergencyAuthorized
-    {
-        uint256 _tokeBalance = tokeTokenBalance();
-
-        _executeTrade(address(tokeToken), address(want), _tokeBalance, 100);
-    }
-
     function claimRewards(
         IRewards.Recipient calldata _recipient,
         uint8 _v,
@@ -236,6 +227,15 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         onlyEmergencyAuthorized 
     {
         tokemakRewards.claim(_recipient, _v, _r, _s);
+    }
+
+    function sellRewards() 
+        external
+        onlyEmergencyAuthorized
+    {
+        uint256 _tokeBalance = tokeTokenBalance();
+
+        executeTrade(address(tokeToken), address(want), _tokeBalance);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------

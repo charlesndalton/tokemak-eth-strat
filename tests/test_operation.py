@@ -21,7 +21,7 @@ def test_operation(
     # tend()
     strategy.tend()
 
-    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
+    utils.make_funds_withdrawable_from_tokemak(strategy, amount)
 
     # withdrawal
     vault.withdraw({"from": user})
@@ -100,7 +100,7 @@ def test_change_debt(
     # TODO: uncomment the following lines.
     vault.updateStrategyDebtRatio(strategy.address, 6_000, {"from": gov})
 
-    utils.make_funds_withdrawable_from_tokemak(utils, strategy, fourty_percent, chain, tokemak_manager, account_with_tokemak_rollover_role)
+    utils.make_funds_withdrawable_from_tokemak(strategy, fourty_percent)
 
     strategy.harvest()
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == sixty_percent

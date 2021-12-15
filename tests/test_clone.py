@@ -1,6 +1,6 @@
 import pytest
 from brownie import chain, Wei, reverts, Contract, ZERO_ADDRESS
-import test_operation
+
 import pytest
 
 

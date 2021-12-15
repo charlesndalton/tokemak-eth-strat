@@ -8,7 +8,7 @@ import {
 import './SwapperEnabled.sol';
 
 abstract contract BaseStrategyWithSwapperEnabled is BaseStrategy, SwapperEnabled {
-    uint256 constant defaultMaxSlippage = 10; // default of 1%
+    uint256 constant defaultMaxSlippage = 100; // default of 1%
 
     constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) public {
     }
@@ -41,7 +41,7 @@ abstract contract BaseStrategyWithSwapperEnabled is BaseStrategy, SwapperEnabled
         address _tokenIn,
         address _tokenOut,
         uint256 _amountIn
-    ) external override returns (uint256 _receivedAmount) {
+    ) public override returns (uint256 _receivedAmount) {
         return _executeTrade(_tokenIn, _tokenOut, _amountIn, defaultMaxSlippage);
     }
     

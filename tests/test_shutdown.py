@@ -26,7 +26,7 @@ def test_vault_shutdown_can_withdraw(
     ## Set Emergency
     vault.setEmergencyShutdown(True)
 
-    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
+    utils.make_funds_withdrawable_from_tokemak(strategy, amount)
 
     ## Withdraw (does it work, do you get what you expect)
     vault.withdraw({"from": user})
@@ -60,7 +60,7 @@ def test_basic_shutdown(
     ## Set emergency
     strategy.setEmergencyExit({"from": strategist})
 
-    utils.make_funds_withdrawable_from_tokemak(utils, strategy, amount, chain, tokemak_manager, account_with_tokemak_rollover_role)
+    utils.make_funds_withdrawable_from_tokemak(strategy, amount)
 
     strategy.harvest()  ## Remove funds from strategy
 
