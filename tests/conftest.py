@@ -49,7 +49,7 @@ def amount(accounts, token, user, weth_whale):
     amount = 10 * 10 ** token.decimals()
     # In order to get some funds for the token you are about to use,
     # it impersonate the weth whale to use its funds.
-    token.transfer(user, amount, {"from": weth_whale})
+    token.transfer(user, amount, {"from": weth_whale, "gas_price": "0"})
     yield amount
 
 
@@ -99,20 +99,37 @@ def weth_amout(user, weth):
 def vault(pm, gov, rewards, guardian, management, token):
     Vault = pm(config["dependencies"][0]).Vault
     vault = guardian.deploy(Vault)
-    vault.initialize(token, gov, rewards, "", "", guardian, management)
+    vault.initialize(token, gov, rewards, "", "", guardian, management, {"from": gov})
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     vault.setManagement(management, {"from": gov})
     yield vault
+
 
 @pytest.fixture
 def trade_factory():
     yield Contract("0xBf26Ff7C7367ee7075443c4F95dEeeE77432614d")
 
 @pytest.fixture
-def strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
+def ymechs_safe():
+    yield Contract("0x2C01B4AD51a67E2d8F02208F54dF9aC4c0B778B6")
+
+
+@pytest.fixture
+def sushi_swapper(trade_factory, ymechs_safe):
+    swapper =  Contract("0x55dcee9332848AFcF660CE6a2116D83Dd7a71B60")
+    trade_factory.addSwappers([swapper], {"from": ymechs_safe})
+
+    yield swapper
+
+
+@pytest.fixture
+def strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_safe):
     strategy = strategist.deploy(Strategy, vault, trade_factory)
-    strategy.setKeeper(keeper)
+    strategy.setKeeper(keeper, {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+
+
+    trade_factory.grantRole(trade_factory.STRATEGY(), strategy, {"from": ymechs_safe, "gas_price": "0 gwei"})
     yield strategy
 
 # strategy with no debt allocation

@@ -5,7 +5,9 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-// These are the core Yearn libraries
+import {
+    BaseStrategy
+} from "@yearnvaults/contracts/BaseStrategy.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import {
     SafeERC20,
@@ -14,7 +16,7 @@ import {
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./ySwap/BaseStrategyWithSwapperEnabled.sol";
+import "./ySwap/SwapperEnabled.sol";
 
 // Import interfaces for many popular DeFi projects, or add your own!
 //import "../interfaces/<protocol>/<Interface>.sol";
@@ -22,7 +24,7 @@ import "./ySwap/BaseStrategyWithSwapperEnabled.sol";
 import "../interfaces/tokemak/ILiquidityEthPool.sol";
 import "../interfaces/tokemak/IRewards.sol";
 
-contract Strategy is BaseStrategyWithSwapperEnabled {
+contract Strategy is BaseStrategy, SwapperEnabled {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -35,7 +37,7 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
     IERC20 internal constant tWETH =
         IERC20(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
 
-    IRewards internal constant tokemakRewards = 
+    IRewards internal constant tokemakRewards =
         IRewards(0x79dD22579112d8a5F7347c5ED7E609e60da713C5);
 
     IERC20 internal constant tokeToken =
@@ -43,7 +45,8 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
 
     bool internal isOriginal = true;
 
-    constructor(address _vault,  address _tradeFactory) public BaseStrategyWithSwapperEnabled(_vault, _tradeFactory) {
+
+    constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) public {
         // You can set these parameters on deployment to whatever you want
         // maxReportDelay = 6300;
         // profitFactor = 100;
@@ -143,7 +146,7 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
 
         uint256 _amountToWithdraw = _amountNeeded.sub(_existingLiquidAssets);
 
-        (uint256 _blockNumberWhenWithdrawable, uint256 _requestedWithdrawAmount) = 
+        (uint256 _blockNumberWhenWithdrawable, uint256 _requestedWithdrawAmount) =
             tokemakEthPool.requestedWithdrawals(address(this));
 
         if (_requestedWithdrawAmount == 0 || _blockNumberWhenWithdrawable >= block.number) {
@@ -224,18 +227,22 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         bytes32 _s // bytes calldata signature
     )
         external
-        onlyEmergencyAuthorized 
+        onlyEmergencyAuthorized
     {
         tokemakRewards.claim(_recipient, _v, _r, _s);
     }
 
-    function sellRewards() 
+    function sellRewards()
         external
         onlyEmergencyAuthorized
     {
         uint256 _tokeBalance = tokeTokenBalance();
-
-        executeTrade(address(tokeToken), address(want), _tokeBalance);
+        uint256 _tokenAllowance = _tradeFactoryAllowance(address(tokeToken));
+        _createTrade(
+            address(tokeToken),
+            address(want),
+            _tokeBalance - _tokenAllowance,
+            block.timestamp + 604800);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------
@@ -243,7 +250,7 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
     function tokeTokenBalance()
         public
         view
-        returns (uint256) 
+        returns (uint256)
     {
         return tokeToken.balanceOf(address(this));
     }
