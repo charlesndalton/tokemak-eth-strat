@@ -104,15 +104,33 @@ def vault(pm, gov, rewards, guardian, management, token):
     vault.setManagement(management, {"from": gov})
     yield vault
 
-@pytest.fixture
-def trade_factory():
-    yield Contract("0x382ec4342775607ad64949bC26402b5F8CD651fe")
 
 @pytest.fixture
-def strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
+def trade_factory():
+    yield Contract("0xBf26Ff7C7367ee7075443c4F95dEeeE77432614d")
+
+
+@pytest.fixture
+def ymechs_safe():
+    yield Contract("0x2C01B4AD51a67E2d8F02208F54dF9aC4c0B778B6")
+
+
+@pytest.fixture
+def one_inch_swapper(trade_factory, ymechs_safe):
+    swapper =  Contract("0xcDd5030710120e0A21F349a453d6B2d62FC8Dfdc")
+    trade_factory.addSwappers([swapper], {"from": ymechs_safe})
+
+    yield swapper
+
+
+@pytest.fixture
+def strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_safe):
     strategy = strategist.deploy(Strategy, vault, trade_factory)
     strategy.setKeeper(keeper)
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+
+
+    trade_factory.grantRole(trade_factory.STRATEGY(), strategy, {"from": ymechs_safe})
     yield strategy
 
 # strategy with no debt allocation
@@ -146,7 +164,7 @@ class Utils:
         # https://etherscan.io/address/0xa86e412109f77c45a3bc1c5870b880492fb86a14#readProxyContract
         self.chain.mine(6300)
         tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": account_with_tokemak_rollover_role})
-    
+
     def make_funds_withdrawable_from_tokemak(self, strategy, amount):
         strategy.requestWithdrawal(amount)
 

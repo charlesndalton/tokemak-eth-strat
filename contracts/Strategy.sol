@@ -35,13 +35,15 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
     IERC20 internal constant tWETH =
         IERC20(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
 
-    IRewards internal constant tokemakRewards = 
+    IRewards internal constant tokemakRewards =
         IRewards(0x79dD22579112d8a5F7347c5ED7E609e60da713C5);
 
     IERC20 internal constant tokeToken =
         IERC20(0x2e9d63788249371f1DFC918a52f8d799F4a38C94);
 
     bool internal isOriginal = true;
+    uint256 internal tradeSlippage; // Trade slippage sent to ySwap, we usually do 3k which is 0.3%
+
 
     constructor(address _vault,  address _tradeFactory) public BaseStrategyWithSwapperEnabled(_vault, _tradeFactory) {
         // You can set these parameters on deployment to whatever you want
@@ -55,6 +57,7 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         address _strategist
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
+         tradeSlippage = 3_000;
     }
 
     event Cloned(address indexed clone);
@@ -143,7 +146,7 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
 
         uint256 _amountToWithdraw = _amountNeeded.sub(_existingLiquidAssets);
 
-        (uint256 _blockNumberWhenWithdrawable, uint256 _requestedWithdrawAmount) = 
+        (uint256 _blockNumberWhenWithdrawable, uint256 _requestedWithdrawAmount) =
             tokemakEthPool.requestedWithdrawals(address(this));
 
         if (_requestedWithdrawAmount == 0 || _blockNumberWhenWithdrawable >= block.number) {
@@ -224,18 +227,23 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         bytes32 _s // bytes calldata signature
     )
         external
-        onlyEmergencyAuthorized 
+        onlyEmergencyAuthorized
     {
         tokemakRewards.claim(_recipient, _v, _r, _s);
     }
 
-    function sellRewards() 
+    function sellRewards()
         external
         onlyEmergencyAuthorized
     {
         uint256 _tokeBalance = tokeTokenBalance();
-
-        executeTrade(address(tokeToken), address(want), _tokeBalance);
+        uint256 _tokenAllowance = _tradeFactoryAllowance(address(tokeToken));
+        _createTrade(
+            address(tokeToken),
+            address(want),
+            _tokeBalance - _tokenAllowance,
+            tradeSlippage,
+            block.timestamp + 604800);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------
@@ -243,7 +251,7 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
     function tokeTokenBalance()
         public
         view
-        returns (uint256) 
+        returns (uint256)
     {
         return tokeToken.balanceOf(address(this));
     }
