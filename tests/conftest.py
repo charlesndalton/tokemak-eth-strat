@@ -116,8 +116,8 @@ def ymechs_safe():
 
 
 @pytest.fixture
-def one_inch_swapper(trade_factory, ymechs_safe):
-    swapper =  Contract("0xcDd5030710120e0A21F349a453d6B2d62FC8Dfdc")
+def sushi_swapper(trade_factory, ymechs_safe):
+    swapper =  Contract("0x55dcee9332848AFcF660CE6a2116D83Dd7a71B60")
     trade_factory.addSwappers([swapper], {"from": ymechs_safe})
 
     yield swapper

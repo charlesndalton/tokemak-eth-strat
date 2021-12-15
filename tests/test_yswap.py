@@ -1,10 +1,12 @@
 from brownie import Contract, Wei
+from eth_abi import encode_abi
 import pytest
 
 
 def test_yswap(
     chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX,
-    tokemak_manager, account_with_tokemak_rollover_role, utils, toke_token, toke_whale, trade_factory
+    tokemak_manager, account_with_tokemak_rollover_role, utils, toke_token,
+    toke_whale, trade_factory, sushi_swapper, ymechs_safe
 ):
     # Deposit to the vault
     user_balance_before = token.balanceOf(user)
@@ -28,13 +30,7 @@ def test_yswap(
         token_out = trade["_tokenOut"]
         print(f"Executing trade {id}, tokenIn: {token_in} -> tokenOut {token_out}")
 
-        path = []
-        if token_in == strategy.wftm():
-            path = [strategy.wftm(), strategy.dai()]
-        else:
-            path = [strategy.crv(), strategy.wftm(), strategy.dai()]
 
+        path = [toke_token.address, token.address]
         trade_data = encode_abi(["address[]"], [path])
-        trade_factory.execute["uint256, bytes"](id, trade_data, {"from": ymechanic})
-
-    assert False
+        trade_factory.execute["uint256, address, uint, bytes"](id, sushi_swapper.address, Wei("0.1 ether"), trade_data, {"from": ymechs_safe})
