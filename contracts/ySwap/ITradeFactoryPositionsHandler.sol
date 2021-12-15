@@ -52,7 +52,6 @@ interface ITradeFactoryPositionsHandler {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage,
     uint256 _deadline
   ) external returns (uint256 _id);
 

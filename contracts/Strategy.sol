@@ -5,7 +5,9 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-// These are the core Yearn libraries
+import {
+    BaseStrategy
+} from "@yearnvaults/contracts/BaseStrategy.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import {
     SafeERC20,
@@ -14,7 +16,7 @@ import {
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./ySwap/BaseStrategyWithSwapperEnabled.sol";
+import "./ySwap/SwapperEnabled.sol";
 
 // Import interfaces for many popular DeFi projects, or add your own!
 //import "../interfaces/<protocol>/<Interface>.sol";
@@ -22,7 +24,7 @@ import "./ySwap/BaseStrategyWithSwapperEnabled.sol";
 import "../interfaces/tokemak/ILiquidityEthPool.sol";
 import "../interfaces/tokemak/IRewards.sol";
 
-contract Strategy is BaseStrategyWithSwapperEnabled {
+contract Strategy is BaseStrategy, SwapperEnabled {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -42,10 +44,9 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         IERC20(0x2e9d63788249371f1DFC918a52f8d799F4a38C94);
 
     bool internal isOriginal = true;
-    uint256 internal tradeSlippage; // Trade slippage sent to ySwap, we usually do 3k which is 0.3%
 
 
-    constructor(address _vault,  address _tradeFactory) public BaseStrategyWithSwapperEnabled(_vault, _tradeFactory) {
+    constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) public {
         // You can set these parameters on deployment to whatever you want
         // maxReportDelay = 6300;
         // profitFactor = 100;
@@ -57,7 +58,6 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
         address _strategist
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
-         tradeSlippage = 3_000;
     }
 
     event Cloned(address indexed clone);
@@ -242,7 +242,6 @@ contract Strategy is BaseStrategyWithSwapperEnabled {
             address(tokeToken),
             address(want),
             _tokeBalance - _tokenAllowance,
-            tradeSlippage,
             block.timestamp + 604800);
     }
 

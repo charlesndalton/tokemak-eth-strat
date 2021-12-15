@@ -14,7 +14,7 @@ def test_yswap(
 
     # harvest
     chain.sleep(1)
-    strategy.harvest()
+    strategy.harvest({"from": strategist})
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
 

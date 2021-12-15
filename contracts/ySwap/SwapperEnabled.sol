@@ -5,59 +5,21 @@ import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import './ITradeFactoryPositionsHandler.sol';
 import './ITradeFactoryExecutor.sol';
 
-interface ISwapperEnabled {
-  event TradeFactorySet(address indexed _tradeFactory);
-
-  function tradeFactory() external returns (address _tradeFactory);
-
-  function setTradeFactory(address _tradeFactory) external;
-
-  function createTrade(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external returns (uint256 _id);
-
-  function executeTrade(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage
-  ) external returns (uint256 _receivedAmount);
-
-  function executeTrade(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn
-  ) external returns (uint256 _receivedAmount);
-
-  function executeTrade(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    bytes calldata _data
-  ) external returns (uint256 _receivedAmount);
-
-
-  function cancelPendingTrades(uint256[] calldata _pendingTrades) external;
-}
 
 /*
  * SwapperEnabled Abstract
  */
-abstract contract SwapperEnabled is ISwapperEnabled {
+abstract contract SwapperEnabled {
   using SafeERC20 for IERC20;
 
-  address public override tradeFactory;
+  address public tradeFactory;
 
   constructor(address _tradeFactory) public {
     _setTradeFactory(_tradeFactory);
   }
 
   // onlyMultisig:
+  event TradeFactorySet(address indexed _tradeFactory);
   function _setTradeFactory(address _tradeFactory) internal {
     tradeFactory = _tradeFactory;
     emit TradeFactorySet(_tradeFactory);
@@ -67,11 +29,10 @@ abstract contract SwapperEnabled is ISwapperEnabled {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage,
     uint256 _deadline
   ) internal returns (uint256 _id) {
     IERC20(_tokenIn).safeIncreaseAllowance(tradeFactory, _amountIn);
-    return ITradeFactoryPositionsHandler(tradeFactory).create(_tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    return ITradeFactoryPositionsHandler(tradeFactory).create(_tokenIn, _tokenOut, _amountIn, _deadline);
   }
 
   function _executeTrade(
