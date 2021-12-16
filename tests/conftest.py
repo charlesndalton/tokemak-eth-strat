@@ -132,6 +132,7 @@ def strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_saf
     trade_factory.grantRole(trade_factory.STRATEGY(), strategy, {"from": ymechs_safe, "gas_price": "0 gwei"})
     yield strategy
 
+
 # strategy with no debt allocation
 @pytest.fixture
 def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
@@ -139,13 +140,16 @@ def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov)
     strategy.setKeeper(keeper)
     yield strategy
 
+
 @pytest.fixture(scope="session")
 def RELATIVE_APPROX():
     yield 1e-5
 
+
 @pytest.fixture
 def tokemak_weth_pool():
     yield Contract("0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36")
+
 
 @pytest.fixture
 def utils(chain, tokemak_manager, account_with_tokemak_rollover_role):
@@ -162,7 +166,7 @@ class Utils:
         cycle_duration = self.tokemak_manager.getCycleDuration()
         self.chain.mine(cycle_duration + 100)
         self.tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": self.account_with_tokemak_rollover_role})
-    
+
     def make_funds_withdrawable_from_tokemak(self, strategy, amount):
         strategy.requestWithdrawal(amount)
 

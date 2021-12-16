@@ -1,19 +1,18 @@
 import pytest
 from brownie import chain, Wei, reverts, Contract, ZERO_ADDRESS
 
-import pytest
-
 
 def test_clone_strategy(
-    chain, accounts, token, vault, user, standalone_strategy, strategist, amount, 
-    RELATIVE_APPROX, tweth, gov, trade_factory
+    chain, accounts, token, vault, user, standalone_strategy, strategist,
+    amount, RELATIVE_APPROX, tweth, gov, trade_factory
 ):
-  
+
     clone_tx = standalone_strategy.cloneTokemakWeth(vault, strategist, trade_factory, {"from": strategist})
     cloned_strategy = Contract.from_abi(
         "Strategy", clone_tx.events["Cloned"]["clone"], standalone_strategy.abi
     )
 
+    assert cloned_strategy.tradeFactory() != ZERO_ADDRESS
     vault.addStrategy(cloned_strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
 
     # Deposit to the vault
