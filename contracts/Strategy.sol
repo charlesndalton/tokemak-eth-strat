@@ -19,7 +19,6 @@ import {
 import "./ySwap/SwapperEnabled.sol";
 
 // Import interfaces for many popular DeFi projects, or add your own!
-//import "../interfaces/<protocol>/<Interface>.sol";
 
 import "../interfaces/tokemak/ILiquidityEthPool.sol";
 import "../interfaces/tokemak/IRewards.sol";
@@ -210,14 +209,13 @@ contract Strategy is BaseStrategy, SwapperEnabled {
         override
         returns (uint256)
     {
-        // WETH strategy so wei * 10^18
-        return _amtInWei.mul(10 ** 18);
+        return _amtInWei;
     }
 
     // ----------------- STRATEGIST-MANAGED FUNCTIONS ---------
 
     function requestWithdrawal(uint256 amount)
-        public
+        external
         onlyEmergencyAuthorized
     {
         tokemakEthPool.requestWithdrawal(amount);
@@ -239,13 +237,20 @@ contract Strategy is BaseStrategy, SwapperEnabled {
         external
         onlyEmergencyAuthorized
     {
+        sellRewards(block.timestamp + 604800);
+    }
+
+    function sellRewards(uint256 _deadline)
+        public
+        onlyEmergencyAuthorized
+    {
         uint256 _tokeBalance = tokeTokenBalance();
         uint256 _tokenAllowance = _tradeFactoryAllowance(address(tokeToken));
         _createTrade(
             address(tokeToken),
             address(want),
             _tokeBalance - _tokenAllowance,
-            block.timestamp + 604800);
+            _deadline);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------
