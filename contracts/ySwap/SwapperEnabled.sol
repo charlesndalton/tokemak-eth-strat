@@ -2,9 +2,8 @@
 pragma solidity 0.6.12;
 
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import './ITradeFactoryPositionsHandler.sol';
-import './ITradeFactoryExecutor.sol';
 
+import './TradeFactory.sol';
 
 /*
  * SwapperEnabled Abstract
@@ -25,6 +24,7 @@ abstract contract SwapperEnabled {
     emit TradeFactorySet(_tradeFactory);
   }
 
+  // onlyMultisig or internal use:
   function _createTrade(
     address _tokenIn,
     address _tokenOut,
@@ -57,16 +57,12 @@ abstract contract SwapperEnabled {
   }
 
   // onlyStrategist or multisig:
-  function _cancelPendingTrades(uint256[] calldata _pendingTrades) internal {
-    for (uint256 i; i < _pendingTrades.length; i++) {
-      _cancelPendingTrade(_pendingTrades[i]);
+  function _cancelPendingTrades(uint256[] calldata _tradesIds) internal {
+    for (uint256 i; i < _tradesIds.length; i++) {
+      (, , address _tokenIn, , uint256 _amountIn, ) = ITradeFactoryPositionsHandler(tradeFactory).pendingTradesById(_tradesIds[i]);
+      IERC20(_tokenIn).safeDecreaseAllowance(tradeFactory, _amountIn);
     }
-  }
-
-  function _cancelPendingTrade(uint256 _pendingTradeId) internal {
-    (, , , address _tokenIn, , uint256 _amountIn, , ) = ITradeFactoryPositionsHandler(tradeFactory).pendingTradesById(_pendingTradeId);
-    IERC20(_tokenIn).safeDecreaseAllowance(tradeFactory, _amountIn);
-    ITradeFactoryPositionsHandler(tradeFactory).cancelPending(_pendingTradeId);
+    ITradeFactoryPositionsHandler(tradeFactory).cancelPendingTrades(_tradesIds);
   }
 
   function _tradeFactoryAllowance(address _token) internal view returns (uint256 _allowance) {
