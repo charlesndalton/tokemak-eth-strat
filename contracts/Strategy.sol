@@ -114,11 +114,9 @@ contract Strategy is BaseStrategy, SwapperEnabled {
             _loss = totalDebt.sub(totalAssets);
         }
 
-        liquidatePosition(_debtOutstanding);
+        (uint256 _liquidatedAmount, ) = liquidatePosition(_debtOutstanding);
 
-        uint256 _liquidAssets = wantBalance();
-
-        _debtPayment = Math.min(_debtOutstanding, _liquidAssets);
+        _debtPayment = Math.min(_debtOutstanding, _liquidatedAmount);
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
