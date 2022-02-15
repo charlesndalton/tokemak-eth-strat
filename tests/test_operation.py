@@ -4,14 +4,12 @@ import pytest
 
 
 def test_operation(
-    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, 
-    tokemak_manager, account_with_tokemak_rollover_role, utils
+    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX,
+    tokemak_manager, tokemak_eth_pool, account_with_tokemak_rollover_role, utils
 ):
     # Deposit to the vault
     user_balance_before = token.balanceOf(user)
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
-    assert token.balanceOf(vault.address) == amount
+    utils.move_user_funds_to_vault(user, vault, token, amount)
 
     # harvest
     chain.sleep(1)
@@ -134,7 +132,7 @@ def test_sweep(gov, vault, strategy, token, user, amount, toke_token, toke_whale
 
 
 def test_triggers(
-    chain, gov, vault, strategy, token, amount, user, weth, weth_amout, strategist
+    chain, gov, vault, strategy, token, amount, user, weth, weth_amount, strategist
 ):
     # Deposit to the vault and harvest
     token.approve(vault.address, amount, {"from": user})

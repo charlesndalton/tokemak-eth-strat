@@ -70,8 +70,13 @@ def toke_token():
 
 @pytest.fixture
 def tokemak_manager():
-    token_address = "0xA86e412109f77c45a3BC1c5870b880492Fb86A14"
-    yield Contract(token_address)
+    address = "0xA86e412109f77c45a3BC1c5870b880492Fb86A14"
+    yield Contract(address)
+
+@pytest.fixture
+def tokemak_eth_pool():
+    address = "0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36"
+    yield Contract(address)
 
 @pytest.fixture
 def weth_whale(accounts):
@@ -89,10 +94,10 @@ def account_with_tokemak_rollover_role(accounts):
     yield accounts.at("0x9e0bcE7ec474B481492610eB9dd5D69EB03718D5", force=True)
 
 @pytest.fixture
-def weth_amout(user, weth):
-    weth_amout = 10 ** weth.decimals()
-    user.transfer(weth, weth_amout)
-    yield weth_amout
+def weth_amount(user, weth):
+    weth_amount = 10 ** weth.decimals()
+    user.transfer(weth, weth_amount)
+    yield weth_amount
 
 
 @pytest.fixture
@@ -162,9 +167,14 @@ class Utils:
         cycle_duration = self.tokemak_manager.getCycleDuration()
         self.chain.mine(cycle_duration + 100)
         self.tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": self.account_with_tokemak_rollover_role})
-    
+
     def make_funds_withdrawable_from_tokemak(self, strategy, amount):
         strategy.requestWithdrawal(amount)
 
         # Tokemak has 1 day timelock for withdrawals
         self.mock_one_day_passed()
+
+    def move_user_funds_to_vault(self, user, vault, token, amount):
+        token.approve(vault.address, amount, {"from": user})
+        vault.deposit(amount, {"from": user})
+        assert token.balanceOf(vault.address) == amount

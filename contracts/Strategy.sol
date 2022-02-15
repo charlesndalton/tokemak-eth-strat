@@ -31,6 +31,9 @@ contract Strategy is BaseStrategy, SwapperEnabled {
     ILiquidityEthPool internal constant tokemakEthPool =
         ILiquidityEthPool(0xD3D13a578a53685B4ac36A1Bab31912D2B2A2F36);
 
+    IManager internal constant tokemakManager =
+        IManager(0xA86e412109f77c45a3BC1c5870b880492Fb86A14);
+
     // From Tokemak docs: tABC tokens represent your underlying claim to the assets
     // you deposited into the token reactor, available to be redeemed 1:1 at any time
     IERC20 internal constant tWETH =
@@ -146,10 +149,12 @@ contract Strategy is BaseStrategy, SwapperEnabled {
 
         uint256 _amountToWithdraw = _amountNeeded.sub(_existingLiquidAssets);
 
-        (uint256 _blockNumberWhenWithdrawable, uint256 _requestedWithdrawAmount) =
+        (uint256 _cycleIndexWhenWithdrawable, uint256 _requestedWithdrawAmount) =
             tokemakEthPool.requestedWithdrawals(address(this));
 
-        if (_requestedWithdrawAmount == 0 || _blockNumberWhenWithdrawable >= block.number) {
+        if (_requestedWithdrawAmount == 0 || _cycleIndexWhenWithdrawable > tokemakManager.getCurrentCycleIndex()) {
+            tokemakEthPool.requestWithdrawal(_amountToWithdraw);
+
             return (_existingLiquidAssets, 0);
         }
 
@@ -164,6 +169,11 @@ contract Strategy is BaseStrategy, SwapperEnabled {
         uint256 _newLiquidAssets = wantBalance();
 
         _liquidatedAmount = Math.min(_newLiquidAssets, _amountNeeded);
+
+        if (_liquidatedAmount < _amountNeeded) {
+            // If we couldn't liquidate the full amount needed, start the withdrawal process for the remaining
+            tokemakEthPool.requestWithdrawal(_amountNeeded.sub(_liquidatedAmount));
+        }
     }
 
     function liquidateAllPositions()
