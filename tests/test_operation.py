@@ -143,3 +143,29 @@ def test_triggers(
 
     strategy.harvestTrigger(0)
     strategy.tendTrigger(0)
+
+def test_operation_when_tokemak_pool_paused(
+    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX,
+    tokemak_manager, tokemak_eth_pool, account_with_tokemak_rollover_role, tokemak_multisig, utils
+):
+    tokemak_eth_pool.pause({"from": tokemak_multisig})
+
+    # Deposit to the vault
+    user_balance_before = token.balanceOf(user)
+    utils.move_user_funds_to_vault(user, vault, token, amount)
+
+    # harvest & tend
+    chain.sleep(1)
+    strategy.harvest()
+    strategy.tend()
+
+    # since paused, strategy shouldn't have been able to do anything with the WETH
+    assert pytest.approx(token.balanceOf(strategy.address), rel=RELATIVE_APPROX) == amount
+
+    # withdrawal
+    vault.withdraw({"from": user})
+    assert (
+        pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == user_balance_before
+    )
+
+    tokemak_eth_pool.unpause({"from": tokemak_multisig})

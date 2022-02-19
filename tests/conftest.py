@@ -94,6 +94,11 @@ def account_with_tokemak_rollover_role(accounts):
     yield accounts.at("0x9e0bcE7ec474B481492610eB9dd5D69EB03718D5", force=True)
 
 @pytest.fixture
+def tokemak_multisig(accounts):
+    # this account should be the owner of the eth pool
+    yield accounts.at("0x90b6c61b102ea260131ab48377e143d6eb3a9d4b", force=True)
+
+@pytest.fixture
 def weth_amount(user, weth):
     weth_amount = 10 ** weth.decimals()
     user.transfer(weth, weth_amount)

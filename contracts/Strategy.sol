@@ -130,7 +130,7 @@ contract Strategy is BaseStrategy, SwapperEnabled {
 
             _checkAllowance(address(tokemakEthPool), address(want), _amountToInvest);
 
-            tokemakEthPool.deposit(_amountToInvest);
+            try tokemakEthPool.deposit(_amountToInvest) {} catch {}
         }
     }
 
@@ -164,15 +164,17 @@ contract Strategy is BaseStrategy, SwapperEnabled {
             _requestedWithdrawAmount
         );
 
-        tokemakEthPool.withdraw(_amountToWithdraw, false);
+        try tokemakEthPool.withdraw(_amountToWithdraw, false) {
+            uint256 _newLiquidAssets = wantBalance();
 
-        uint256 _newLiquidAssets = wantBalance();
+            _liquidatedAmount = Math.min(_newLiquidAssets, _amountNeeded);
 
-        _liquidatedAmount = Math.min(_newLiquidAssets, _amountNeeded);
-
-        if (_liquidatedAmount < _amountNeeded) {
-            // If we couldn't liquidate the full amount needed, start the withdrawal process for the remaining
-            tokemakEthPool.requestWithdrawal(_amountNeeded.sub(_liquidatedAmount));
+            if (_liquidatedAmount < _amountNeeded) {
+                // If we couldn't liquidate the full amount needed, start the withdrawal process for the remaining
+                tokemakEthPool.requestWithdrawal(_amountNeeded.sub(_liquidatedAmount));
+            }
+        } catch {
+            return (_existingLiquidAssets, 0);
         }
     }
 
