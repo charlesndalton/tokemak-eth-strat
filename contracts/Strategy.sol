@@ -187,7 +187,7 @@ contract Strategy is BaseStrategy, SwapperEnabled {
     function prepareMigration(address _newStrategy) internal override {
         uint256 _amountToTransfer = twethBalance();
 
-        tWETH.transfer(_newStrategy, _amountToTransfer);
+        tWETH.safeTransfer(_newStrategy, _amountToTransfer);
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -294,7 +294,7 @@ contract Strategy is BaseStrategy, SwapperEnabled {
     ) internal {
         if (IERC20(_token).allowance(address(this), _contract) < _amount) {
             IERC20(_token).safeApprove(_contract, 0);
-            IERC20(_token).safeApprove(_contract, type(uint256).max);
+            IERC20(_token).safeApprove(_contract, _amount);
         }
     }
 
