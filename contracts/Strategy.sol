@@ -238,21 +238,22 @@ contract Strategy is BaseStrategy, SwapperEnabled {
         bytes32 _s // bytes calldata signature
     )
         external
-        onlyEmergencyAuthorized
+        onlyVaultManagement
     {
+        assert(_recipient.wallet = address(this), "Recipient wallet must be strategy");
         tokemakRewards.claim(_recipient, _v, _r, _s);
     }
 
     function sellRewards()
         external
-        onlyEmergencyAuthorized
+        onlyVaultManagement
     {
         sellRewards(block.timestamp + 604800);
     }
 
     function sellRewards(uint256 _deadline)
         public
-        onlyEmergencyAuthorized
+        onlyVaultManagement
     {
         uint256 _tokeBalance = tokeTokenBalance();
         uint256 _tokenAllowance = _tradeFactoryAllowance(address(tokeToken));
