@@ -154,10 +154,9 @@ def strategy(standalone_strategy, vault, Strategy, gov):
 # strategy with no debt allocation
 @pytest.fixture
 def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_safe, utils):
-    predicted_strategy_address = strategist.get_deployment_address()
-    trade_factory.grantRole(trade_factory.STRATEGY(), predicted_strategy_address, {"from": ymechs_safe, "gas_price": "0 gwei"})
-    strategy = strategist.deploy(Strategy, vault, trade_factory)
+    strategy = strategist.deploy(Strategy, vault)
     strategy.setKeeper(keeper, {"from": gov})
+    utils.prepare_trade_factory(strategy, trade_factory, ymechs_safe, gov)
 
     yield strategy
 
@@ -196,13 +195,6 @@ class Utils:
         vault.deposit(amount, {"from": user})
         assert token.balanceOf(vault.address) == amount
 
-    def mk_contract_address(self, sender: str, nonce: int) -> str:
-        """Create a contract address using eth-utils.
-
-        # https://ethereum.stackexchange.com/a/761/620
-        """
-        sender_bytes = to_bytes(hexstr=sender)
-        raw = rlp.encode([sender_bytes, nonce])
-        h = keccak(raw)
-        address_bytes = h[12:]
-        return to_checksum_address(address_bytes)
+    def prepare_trade_factory(self, strategy, trade_factory, ymechs_safe, gov):
+        trade_factory.grantRole(trade_factory.STRATEGY(), strategy.address, {"from": ymechs_safe, "gas_price": "0 gwei"})
+        strategy.setTradeFactory(trade_factory.address, {"from": gov})

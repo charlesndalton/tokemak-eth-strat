@@ -30,7 +30,7 @@ def test_migration(
     # migrate to a new strategy
     predicted_new_strategy_address = strategist.get_deployment_address()
     trade_factory.grantRole(trade_factory.STRATEGY(), predicted_new_strategy_address, {"from": ymechs_safe, "gas_price": "0 gwei"})
-    new_strategy = strategist.deploy(Strategy, vault, trade_factory)
+    new_strategy = strategist.deploy(Strategy, vault)
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})
     assert (
         pytest.approx(new_strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX)

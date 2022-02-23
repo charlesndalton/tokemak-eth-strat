@@ -47,14 +47,13 @@ contract Strategy is BaseStrategy {
 
     bool internal isOriginal = true;
 
-    address public tradeFactory;
+    address public tradeFactory = address(0);
 
-    constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) public {
+    constructor(address _vault) BaseStrategy(_vault) public {
         // You can set these parameters on deployment to whatever you want
         // maxReportDelay = 6300;
         // profitFactor = 100;
         // debtThreshold = 0;
-        _prepareTradeFactory(_tradeFactory);
     }
 
      // this will only be called by the clone function
@@ -64,7 +63,6 @@ contract Strategy is BaseStrategy {
         address _tradeFactory
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
-         _prepareTradeFactory(_tradeFactory);
     }
 
     event Cloned(address indexed clone);
@@ -109,6 +107,7 @@ contract Strategy is BaseStrategy {
             uint256 _debtPayment
         )
     {
+        require(tradeFactory != address(0), "Trade factory must be set.");
         // How much do we owe to the vault?
         uint256 totalDebt = vault.strategies(address(this)).totalDebt;
 
@@ -227,22 +226,16 @@ contract Strategy is BaseStrategy {
 
     // ----------------- YSWAPS FUNCTIONS ---------------------
 
-    function _prepareTradeFactory(address _tradeFactory) internal {
+    function setTradeFactory(address _tradeFactory) external onlyGovernance {
+        if (tradeFactory != address(0)) {
+            _removeTradeFactoryPermissions();
+        }
+
         // approve and set up trade factory
         tokeToken.safeApprove(_tradeFactory, type(uint256).max);
         ITradeFactory tf = ITradeFactory(_tradeFactory);
         tf.enable(address(tokeToken), address(want));
         tradeFactory = _tradeFactory;
-    }
-
-    function updateTradeFactory(
-        address _newTradeFactory
-    ) external onlyGovernance {
-        if (tradeFactory != address(0)) {
-            _removeTradeFactoryPermissions();
-        }
-
-        _prepareTradeFactory(_newTradeFactory);
     }
 
     function removeTradeFactoryPermissions() external onlyEmergencyAuthorized {

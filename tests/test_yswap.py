@@ -1,4 +1,5 @@
 from brownie import Contract, Wei
+import brownie
 from eth_abi import encode_single, encode_abi
 from brownie.convert import to_bytes
 from eth_abi.packed import encode_abi_packed
@@ -19,6 +20,7 @@ def test_yswap(
 
     # harvest
     chain.sleep(1)
+    chain.mine(1)
     strategy.harvest({"from": strategist})
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
@@ -102,3 +104,21 @@ def test_remove_trade_factory(
     assert toke_token.allowance(strategy.address, trade_factory.address) == 0
 
 # unable to test updateTradeFactory because there aren't two trade factories deployed
+
+def test_harvest_reverts_without_trade_factory(
+    Strategy, vault, strategist, keeper, gov, token, user, utils, amount, chain
+):
+    strategy = strategist.deploy(Strategy, vault)
+    strategy.setKeeper(keeper, {"from": gov})
+    vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+
+    # Deposit to the vault
+    user_balance_before = token.balanceOf(user)
+    utils.move_user_funds_to_vault(user, vault, token, amount)
+
+    # harvest
+    chain.sleep(1)
+
+
+    with brownie.reverts("Trade factory must be set."):
+        strategy.harvest()
