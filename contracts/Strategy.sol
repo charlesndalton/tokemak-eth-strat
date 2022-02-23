@@ -16,14 +16,14 @@ import {
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./ySwap/SwapperEnabled.sol";
+import "./ySwap/ITradeFactory.sol";
 
 // Import interfaces for many popular DeFi projects, or add your own!
 
 import "../interfaces/tokemak/ILiquidityEthPool.sol";
 import "../interfaces/tokemak/IRewards.sol";
 
-contract Strategy is BaseStrategy, SwapperEnabled {
+contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -47,21 +47,25 @@ contract Strategy is BaseStrategy, SwapperEnabled {
 
     bool internal isOriginal = true;
 
+    bool public tradesEnabled;
+    address public tradeFactory;
 
-    constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) public {
+    constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) public {
         // You can set these parameters on deployment to whatever you want
         // maxReportDelay = 6300;
         // profitFactor = 100;
         // debtThreshold = 0;
+        _initializeTradeFactory(_tradeFactory);
     }
 
+     // this will only be called by the clone function
     function initialize(
         address _vault,
         address _strategist,
         address _tradeFactory
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
-         _setTradeFactory(_tradeFactory);
+         _initializeTradeFactory(_tradeFactory);
     }
 
     event Cloned(address indexed clone);
@@ -106,6 +110,10 @@ contract Strategy is BaseStrategy, SwapperEnabled {
             uint256 _debtPayment
         )
     {
+        if (tradesEnabled == false && tradeFactory != address(0)){
+            _prepareTradeFactory();
+        }
+
         // How much do we owe to the vault?
         uint256 totalDebt = vault.strategies(address(this)).totalDebt;
 
@@ -222,6 +230,40 @@ contract Strategy is BaseStrategy, SwapperEnabled {
         return _amtInWei;
     }
 
+    // ----------------- YSWAPS FUNCTIONS ---------------------
+
+    function _initializeTradeFactory(address _tradeFactory) internal {
+        tradeFactory = _tradeFactory;
+    }
+
+    function _prepareTradeFactory() internal {
+        // approve and set up trade factory
+        tokeToken.safeApprove(tradeFactory, type(uint256).max);
+        ITradeFactory tf = ITradeFactory(tradeFactory);
+        tf.enable(address(tokeToken), address(want));
+        tradesEnabled = true;
+    }
+
+    function updateTradeFactory(
+        address _newTradeFactory
+    ) external onlyGovernance {
+        if(tradeFactory != address(0)) {
+            _removeTradeFactoryPermissions();
+        }
+
+        _prepareTradeFactory();
+    }
+
+    function removeTradeFactoryPermissions() external onlyEmergencyAuthorized{
+        _removeTradeFactoryPermissions();
+
+    }
+    function _removeTradeFactoryPermissions() internal {
+        tokeToken.safeApprove(tradeFactory, 0);
+        tradeFactory = address(0);
+        tradesEnabled = false;
+    }
+
     // ----------------- STRATEGIST-MANAGED FUNCTIONS ---------
 
     function requestWithdrawal(uint256 amount)
@@ -238,30 +280,10 @@ contract Strategy is BaseStrategy, SwapperEnabled {
         bytes32 _s // bytes calldata signature
     )
         external
-        onlyVaultManagement
+        onlyAuthorized
     {
-        assert(_recipient.wallet = address(this), "Recipient wallet must be strategy");
+        require(_recipient.wallet == address(this), "Recipient wallet must be strategy");
         tokemakRewards.claim(_recipient, _v, _r, _s);
-    }
-
-    function sellRewards()
-        external
-        onlyVaultManagement
-    {
-        sellRewards(block.timestamp + 604800);
-    }
-
-    function sellRewards(uint256 _deadline)
-        public
-        onlyVaultManagement
-    {
-        uint256 _tokeBalance = tokeTokenBalance();
-        uint256 _tokenAllowance = _tradeFactoryAllowance(address(tokeToken));
-        _createTrade(
-            address(tokeToken),
-            address(want),
-            _tokeBalance - _tokenAllowance,
-            _deadline);
     }
 
     // ----------------- SUPPORT FUNCTIONS ----------

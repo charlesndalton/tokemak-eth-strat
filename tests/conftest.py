@@ -117,20 +117,30 @@ def vault(pm, gov, rewards, guardian, management, token):
 
 @pytest.fixture
 def trade_factory():
-    yield Contract("0xBf26Ff7C7367ee7075443c4F95dEeeE77432614d")
+    yield Contract("0x99d8679bE15011dEAD893EB4F5df474a4e6a8b29")
 
 @pytest.fixture
 def ymechs_safe():
     yield Contract("0x2C01B4AD51a67E2d8F02208F54dF9aC4c0B778B6")
 
 
-@pytest.fixture
-def sushi_swapper(trade_factory, ymechs_safe):
-    swapper =  Contract("0x55dcee9332848AFcF660CE6a2116D83Dd7a71B60")
-    trade_factory.addSwappers([swapper], {"from": ymechs_safe})
+# @pytest.fixture
+# def sushi_swapper(trade_factory, ymechs_safe):
+#     swapper =  Contract("0x55dcee9332848AFcF660CE6a2116D83Dd7a71B60")
+#     trade_factory.addSwappers([swapper], {"from": ymechs_safe})
+#
+#     yield swapper
 
-    yield swapper
+@pytest.fixture(scope="module")
+def sushiswap_router(Contract):
+    yield Contract("0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F")
 
+@pytest.fixture(scope="module")
+def multicall_swapper(interface):
+    yield interface.MultiCallOptimizedSwapper(
+        #"0xceB202F25B50e8fAF212dE3CA6C53512C37a01D2"
+        "0xB2F65F254Ab636C96fb785cc9B4485cbeD39CDAA"
+    )
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_safe):

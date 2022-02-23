@@ -5,22 +5,21 @@ import pytest
 
 
 def test_clone_strategy(
-    chain, accounts, token, vault, user, standalone_strategy, strategist, amount, 
-    RELATIVE_APPROX, tweth, gov, trade_factory
+    chain, accounts, token, vault, user, standalone_strategy, strategist, amount,
+    RELATIVE_APPROX, tweth, gov, trade_factory, utils, ymechs_safe
 ):
-  
+
     clone_tx = standalone_strategy.cloneTokemakWeth(vault, strategist, trade_factory, {"from": strategist})
     cloned_strategy = Contract.from_abi(
         "Strategy", clone_tx.events["Cloned"]["clone"], standalone_strategy.abi
     )
-
     vault.addStrategy(cloned_strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+    trade_factory.grantRole(trade_factory.STRATEGY(), cloned_strategy, {"from": ymechs_safe, "gas_price": "0 gwei"})
 
     # Deposit to the vault
+    # Deposit to the vault
     user_balance_before = token.balanceOf(user)
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
-    assert token.balanceOf(vault.address) == amount
+    utils.move_user_funds_to_vault(user, vault, token, amount)
 
     # harvest
     chain.sleep(1)
