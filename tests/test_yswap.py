@@ -93,10 +93,12 @@ def createTx(to, data):
 def test_remove_trade_factory(
     strategy, gov, trade_factory, toke_token
 ):
-    assert strategy.tradeFactory == trade_factory.address
+    assert strategy.tradeFactory() == trade_factory.address
     assert toke_token.allowance(strategy.address, trade_factory.address) > 0
 
     strategy.removeTradeFactoryPermissions({'from': gov})
 
-    assert strategy.tradeFactory != trade_factory.address
+    assert strategy.tradeFactory() != trade_factory.address
     assert toke_token.allowance(strategy.address, trade_factory.address) == 0
+
+# unable to test updateTradeFactory because there aren't two trade factories deployed

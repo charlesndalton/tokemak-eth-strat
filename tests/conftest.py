@@ -157,7 +157,7 @@ def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov,
     predicted_strategy_address = strategist.get_deployment_address()
     trade_factory.grantRole(trade_factory.STRATEGY(), predicted_strategy_address, {"from": ymechs_safe, "gas_price": "0 gwei"})
     strategy = strategist.deploy(Strategy, vault, trade_factory)
-    strategy.setKeeper(keeper)
+    strategy.setKeeper(keeper, {"from": gov})
 
     yield strategy
 

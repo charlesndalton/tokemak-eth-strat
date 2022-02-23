@@ -238,14 +238,14 @@ contract Strategy is BaseStrategy {
     function updateTradeFactory(
         address _newTradeFactory
     ) external onlyGovernance {
-        if(tradeFactory != address(0)) {
+        if (tradeFactory != address(0)) {
             _removeTradeFactoryPermissions();
         }
 
         _prepareTradeFactory(_newTradeFactory);
     }
 
-    function removeTradeFactoryPermissions() external onlyEmergencyAuthorized{
+    function removeTradeFactoryPermissions() external onlyEmergencyAuthorized {
         _removeTradeFactoryPermissions();
 
     }
@@ -270,7 +270,7 @@ contract Strategy is BaseStrategy {
         bytes32 _s // bytes calldata signature
     )
         external
-        onlyAuthorized
+        onlyVaultManagers
     {
         require(_recipient.wallet == address(this), "Recipient wallet must be strategy");
         tokemakRewards.claim(_recipient, _v, _r, _s);
