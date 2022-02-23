@@ -90,14 +90,13 @@ def createTx(to, data):
     inBytes = eth_utils.to_bytes(hexstr=data)
     return [["address", "uint256", "bytes"], [to.address, len(inBytes), inBytes]]
 
+def test_remove_trade_factory(
+    strategy, gov, trade_factory, toke_token
+):
+    assert strategy.tradeFactory == trade_factory.address
+    assert toke_token.allowance(strategy.address, trade_factory.address) > 0
 
-    for id in trade_factory.pendingTradesIds(strategy):
-        trade = trade_factory.pendingTradesById(id).dict()
-        token_in = trade["_tokenIn"]
-        token_out = trade["_tokenOut"]
-        print(f"Executing trade {id}, tokenIn: {token_in} -> tokenOut {token_out}")
+    strategy.removeTradeFactoryPermissions({'from': gov})
 
-
-        path = [toke_token.address, token.address]
-        trade_data = encode_abi(["address[]"], [path])
-        trade_factory.execute["uint256, address, uint, bytes"](id, sushi_swapper.address, Wei("0.1 ether"), trade_data, {"from": ymechs_safe})
+    assert strategy.tradeFactory != trade_factory.address
+    assert toke_token.allowance(strategy.address, trade_factory.address) == 0

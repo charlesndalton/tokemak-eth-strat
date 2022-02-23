@@ -47,7 +47,6 @@ contract Strategy is BaseStrategy {
 
     bool internal isOriginal = true;
 
-    bool public tradesEnabled;
     address public tradeFactory;
 
     constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) public {
@@ -55,7 +54,7 @@ contract Strategy is BaseStrategy {
         // maxReportDelay = 6300;
         // profitFactor = 100;
         // debtThreshold = 0;
-        _initializeTradeFactory(_tradeFactory);
+        _prepareTradeFactory(_tradeFactory);
     }
 
      // this will only be called by the clone function
@@ -65,7 +64,7 @@ contract Strategy is BaseStrategy {
         address _tradeFactory
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
-         _initializeTradeFactory(_tradeFactory);
+         _prepareTradeFactory(_tradeFactory);
     }
 
     event Cloned(address indexed clone);
@@ -110,10 +109,6 @@ contract Strategy is BaseStrategy {
             uint256 _debtPayment
         )
     {
-        if (tradesEnabled == false && tradeFactory != address(0)){
-            _prepareTradeFactory();
-        }
-
         // How much do we owe to the vault?
         uint256 totalDebt = vault.strategies(address(this)).totalDebt;
 
@@ -232,16 +227,12 @@ contract Strategy is BaseStrategy {
 
     // ----------------- YSWAPS FUNCTIONS ---------------------
 
-    function _initializeTradeFactory(address _tradeFactory) internal {
-        tradeFactory = _tradeFactory;
-    }
-
-    function _prepareTradeFactory() internal {
+    function _prepareTradeFactory(address _tradeFactory) internal {
         // approve and set up trade factory
-        tokeToken.safeApprove(tradeFactory, type(uint256).max);
-        ITradeFactory tf = ITradeFactory(tradeFactory);
+        tokeToken.safeApprove(_tradeFactory, type(uint256).max);
+        ITradeFactory tf = ITradeFactory(_tradeFactory);
         tf.enable(address(tokeToken), address(want));
-        tradesEnabled = true;
+        tradeFactory = _tradeFactory;
     }
 
     function updateTradeFactory(
@@ -251,7 +242,7 @@ contract Strategy is BaseStrategy {
             _removeTradeFactoryPermissions();
         }
 
-        _prepareTradeFactory();
+        _prepareTradeFactory(_newTradeFactory);
     }
 
     function removeTradeFactoryPermissions() external onlyEmergencyAuthorized{
@@ -261,7 +252,6 @@ contract Strategy is BaseStrategy {
     function _removeTradeFactoryPermissions() internal {
         tokeToken.safeApprove(tradeFactory, 0);
         tradeFactory = address(0);
-        tradesEnabled = false;
     }
 
     // ----------------- STRATEGIST-MANAGED FUNCTIONS ---------

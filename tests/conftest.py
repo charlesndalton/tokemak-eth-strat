@@ -1,6 +1,8 @@
 import pytest
 from brownie import config
 from brownie import Contract
+import rlp
+from eth_utils import keccak, to_checksum_address, to_bytes
 
 
 @pytest.fixture
@@ -143,20 +145,20 @@ def multicall_swapper(interface):
     )
 
 @pytest.fixture
-def strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_safe):
-    strategy = strategist.deploy(Strategy, vault, trade_factory)
-    strategy.setKeeper(keeper, {"from": gov})
+def strategy(standalone_strategy, vault, Strategy, gov):
+    strategy = standalone_strategy
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
 
-
-    trade_factory.grantRole(trade_factory.STRATEGY(), strategy, {"from": ymechs_safe, "gas_price": "0 gwei"})
     yield strategy
 
 # strategy with no debt allocation
 @pytest.fixture
-def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov):
+def standalone_strategy(strategist, keeper, vault, trade_factory, Strategy, gov, ymechs_safe, utils):
+    predicted_strategy_address = strategist.get_deployment_address()
+    trade_factory.grantRole(trade_factory.STRATEGY(), predicted_strategy_address, {"from": ymechs_safe, "gas_price": "0 gwei"})
     strategy = strategist.deploy(Strategy, vault, trade_factory)
     strategy.setKeeper(keeper)
+
     yield strategy
 
 @pytest.fixture(scope="session")
@@ -193,3 +195,14 @@ class Utils:
         token.approve(vault.address, amount, {"from": user})
         vault.deposit(amount, {"from": user})
         assert token.balanceOf(vault.address) == amount
+
+    def mk_contract_address(self, sender: str, nonce: int) -> str:
+        """Create a contract address using eth-utils.
+
+        # https://ethereum.stackexchange.com/a/761/620
+        """
+        sender_bytes = to_bytes(hexstr=sender)
+        raw = rlp.encode([sender_bytes, nonce])
+        h = keccak(raw)
+        address_bytes = h[12:]
+        return to_checksum_address(address_bytes)
