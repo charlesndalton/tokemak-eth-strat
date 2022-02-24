@@ -59,8 +59,7 @@ contract Strategy is BaseStrategy {
      // this will only be called by the clone function
     function initialize(
         address _vault,
-        address _strategist,
-        address _tradeFactory
+        address _strategist
     ) external {
          _initialize(_vault, _strategist, _strategist, _strategist);
     }
@@ -68,8 +67,7 @@ contract Strategy is BaseStrategy {
     event Cloned(address indexed clone);
     function cloneTokemakWeth(
         address _vault,
-        address _strategist,
-        address _tradeFactory
+        address _strategist
     ) external returns (address payable newStrategy) {
         require(isOriginal);
 
@@ -84,7 +82,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _tradeFactory);
+        Strategy(newStrategy).initialize(_vault, _strategist);
 
         emit Cloned(newStrategy);
     }
