@@ -16,7 +16,7 @@ def test_operation(
     strategy.harvest()
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
-    #tend()
+    # tend()
     strategy.tend()
 
     utils.make_funds_withdrawable_from_tokemak(strategy, amount)
@@ -24,7 +24,7 @@ def test_operation(
     # withdrawal
     vault.withdraw({"from": user})
     assert (
-         pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == user_balance_before
+        pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == user_balance_before
     )
 
 # emergency exit test commented out for now as we don't have an emergency exit path other than waiting for funds

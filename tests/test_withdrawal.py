@@ -29,7 +29,7 @@ def test_withdraw_without_strategist_intervention(
     assert pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == user_balance_before - amount
     assert cycleIndexWhenWithdrawable == tokemak_manager.getCurrentCycleIndex() + 1
 
-    utils.mock_one_day_passed()
+    utils.mock_one_week_passed()
     vault.withdraw({"from": user})
 
     # Strategy should have completed withdrawal
@@ -65,7 +65,7 @@ def test_partial_withdraw(
 
     # Strategy should have triggered a request withdraw for the rest of the amount,
     # so that once a day passes it should be available
-    utils.mock_one_day_passed()
+    utils.mock_one_week_passed()
 
     vault.withdraw({"from": user})
     assert (
