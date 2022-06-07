@@ -117,9 +117,13 @@ contract Strategy is BaseStrategy {
             _loss = totalDebt.sub(totalAssets);
         }
 
-        (uint256 _liquidatedAmount, ) = liquidatePosition(_debtOutstanding);
+        (uint256 _liquidatedAmount, ) =
+            liquidatePosition(_debtOutstanding.add(_profit));
 
-        _debtPayment = Math.min(_debtOutstanding, _liquidatedAmount);
+        _debtPayment = Math.min(
+            _debtOutstanding,
+            _liquidatedAmount.sub(_profit)
+        );
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {

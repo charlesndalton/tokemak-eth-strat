@@ -178,17 +178,17 @@ class Utils:
         self.tokemak_manager = tokemak_manager
         self.account_with_tokemak_rollover_role = account_with_tokemak_rollover_role
 
-    def mock_one_day_passed(self):
-        self.chain.sleep(3600 * 24)
+    def mock_one_week_passed(self):
+        self.chain.sleep(3600 * 24 * 7)
         cycle_duration = self.tokemak_manager.getCycleDuration()
-        self.chain.mine(cycle_duration + 100)
+        # self.chain.mine(cycle_duration + 100)
         self.tokemak_manager.completeRollover("DmTzdi7eC9SM5FaZCzaMpfwpuTt2gXZircVsZUA3DPXWqv", {"from": self.account_with_tokemak_rollover_role})
 
     def make_funds_withdrawable_from_tokemak(self, strategy, amount):
         strategy.requestWithdrawal(amount)
 
         # Tokemak has 1 day timelock for withdrawals
-        self.mock_one_day_passed()
+        self.mock_one_week_passed()
 
     def move_user_funds_to_vault(self, user, vault, token, amount):
         token.approve(vault.address, amount, {"from": user})

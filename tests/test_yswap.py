@@ -80,6 +80,7 @@ def test_yswap(
     strategy.harvest({'from': strategist})
 
     strategy.tend()
+    chain.sleep(1)
 
     utils.make_funds_withdrawable_from_tokemak(strategy, amount)
     strategy.harvest({'from': strategist})
